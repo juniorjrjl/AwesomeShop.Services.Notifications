@@ -1,4 +1,5 @@
 using AwesomeShop.Services.Notifications.API;
+using AwesomeShop.Services.Notifications.API.Infrastructure.Persistence.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,5 +12,9 @@ builder.Services.AddSubscribers();
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope()){
+    var repository = scope.ServiceProvider.GetRequiredService<IMailRepository>();
+    Extensions.Seed(repository);
+}
 
 app.Run();

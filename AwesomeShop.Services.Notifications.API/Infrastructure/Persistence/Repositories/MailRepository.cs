@@ -11,4 +11,7 @@ public class MailRepository(IMongoDatabase database) : IMailRepository
     public async Task<EmailTemplateDTO> GetTemplate(string @event) => 
         await _collection.Find(c => c.Event == @event).SingleOrDefaultAsync();
 
+    public async Task AddManyAsync(List<EmailTemplateDTO> templates) =>
+        await _collection.InsertManyAsync(templates);
+
 }

@@ -38,28 +38,27 @@ public class OrderCreatedSubscriber : BackgroundService
         _channel.QueueBind(Queue, "order-service", "order-created");
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    protected async override Task ExecuteAsync(CancellationToken stoppingToken)
         {
             var consumer = new EventingBasicConsumer(_channel);
 
-            consumer.Received += (sender, eventArgs) => {
+            consumer.Received += async (sender, eventArgs) => {
                 var contentArray = eventArgs.Body.ToArray();
                 var contentString = Encoding.UTF8.GetString(contentArray);
                 var message = JsonConvert.DeserializeObject<OrderCreated>(contentString);
+                ArgumentNullException.ThrowIfNull(message);
 
                 Console.WriteLine($"Message OrderCreated received {message}");
 
-                //await SendEmail(message);
+                await SendEmail(message);
 
                 _channel.BasicAck(eventArgs.DeliveryTag, false);
             };
 
             _channel.BasicConsume(Queue, false, consumer);
-                        
-            return Task.CompletedTask;
         }
 
-    /*private async Task<bool> SendEmail(OrderCreated order) 
+    private async Task<bool> SendEmail(OrderCreated order) 
     {
         using var scope = _serviceProvider.CreateScope();
         var emailService = scope.ServiceProvider.GetService<INotificationService>();
@@ -75,5 +74,5 @@ public class OrderCreatedSubscriber : BackgroundService
         await emailService.SendAsync(subject, content, order.Email, order.FullName);
 
         return true;
-    }*/
+    }
 }

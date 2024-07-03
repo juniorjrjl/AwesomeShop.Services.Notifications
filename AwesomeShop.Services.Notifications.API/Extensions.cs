@@ -1,3 +1,4 @@
+using AwesomeShop.Services.Notifications.API.Infrastructure.DTOs;
 using AwesomeShop.Services.Notifications.API.Infrastructure.Persistence;
 using AwesomeShop.Services.Notifications.API.Infrastructure.Persistence.Repositories;
 using AwesomeShop.Services.Notifications.API.Infrastructure.Services;
@@ -6,7 +7,6 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
-using SendGrid.Extensions.DependencyInjection;
 
 namespace AwesomeShop.Services.Notifications.API;
 
@@ -20,6 +20,11 @@ public static class Extensions
     }
 
     public static IServiceCollection AddMongo(this IServiceCollection services) {
+        BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
+        #pragma warning disable CS0618
+        BsonDefaults.GuidRepresentation = GuidRepresentation.Standard;
+        BsonDefaults.GuidRepresentationMode = GuidRepresentationMode.V3;
+        #pragma warning restore CS0618
         services.AddSingleton(sp => {
             var configuration = sp.GetService<IConfiguration>();
             ArgumentNullException.ThrowIfNull(configuration);
@@ -38,7 +43,6 @@ public static class Extensions
         });
 
         services.AddTransient(sp => {
-            BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
             
             var options = sp.GetService<MongoDBOptions>();
             ArgumentNullException.ThrowIfNull(options);
@@ -52,7 +56,7 @@ public static class Extensions
     }
 
     public static IServiceCollection AddMailService(this IServiceCollection services, IConfiguration configuration) {
-        /*services.AddSingleton(sp => {
+        services.AddSingleton(sp => {
             var configuration = sp.GetService<IConfiguration>();
             ArgumentNullException.ThrowIfNull(configuration);
 
@@ -64,10 +68,8 @@ public static class Extensions
 
         var mailConfig = configuration.GetSection("Notifications").Get<MailConfig>();
         ArgumentNullException.ThrowIfNull(mailConfig);
-        
-        services.AddSendGrid(c => c.ApiKey = mailConfig.SendGridApiKey);
 
-        services.AddTransient<INotificationService, NotificationService>();*/
+        services.AddTransient<INotificationService, NotificationService>();
 
         return services;
     }
@@ -87,6 +89,45 @@ public static class Extensions
         services.AddHostedService<PaymentAcceptedSubscriber>();
 
         return services;
+    }
+
+    public async static void Seed(IMailRepository repository)
+    {
+        var templates = new List<EmailTemplateDTO>();
+        var orderCreated = await repository.GetTemplate("OrderCreated");
+        if (orderCreated is null)
+        {
+            templates.Add(new EmailTemplateDTO(
+                Guid.NewGuid(), 
+                "Your payment is confirmed!", 
+                "Hi, Your payment for the order ID {0} is confirmed. Your product will be prepared and sent soon.",
+                "PaymentAccepted"
+            ));
+        }
+        var customerCreated = await repository.GetTemplate("CustomerCreated");
+        if (customerCreated is null)
+        {
+            templates.Add(new EmailTemplateDTO(
+                Guid.NewGuid(),
+                "Welcome, {0}!",
+                "Welcome to AwesomeShop, {0}! You can search our products in awesome-shop-dot-com,",
+                "CustomerCreated"
+            ));
+        }
+        var paymentAccepted = await repository.GetTemplate("PaymentAccepted");
+        if (paymentAccepted is null)
+        {
+            templates.Add(new EmailTemplateDTO(
+                Guid.NewGuid(),
+                "Your order is confirmed, {0}!",
+                "Hi, {0}. Your order with ID {1} is confirmed. Your payment will be confirmed soon.",
+                "OrderCreated"
+            ));
+        }
+        if (templates.Count != 0)
+        {
+            await repository.AddManyAsync(templates);
+        }
     }
 
 }

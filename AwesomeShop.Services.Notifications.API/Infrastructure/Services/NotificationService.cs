@@ -1,33 +1,30 @@
-
-using SendGrid;
-using SendGrid.Helpers.Mail;
+using MailKit.Net.Smtp;
+using MimeKit;
 
 namespace AwesomeShop.Services.Notifications.API.Infrastructure.Services;
 
-public class NotificationService(MailConfig config, ISendGridClient client) : INotificationService
+public class NotificationService(MailConfig config) : INotificationService
 {
     private readonly MailConfig _config = config;
 
-    private readonly ISendGridClient _client = client;
-
     public async Task SendAsync(string subject, string content, string toEmail, string toName)
     {
-        var from = new EmailAddress(_config.FromEmail, _config.FromName);
-        var to = new EmailAddress(toEmail, toName);
-        
-        var message = new SendGridMessage{
-            From = from,
-            Subject = subject,
+        var message = new MimeMessage();
+
+        message.From.Add(new MailboxAddress(_config.FromName, _config.FromEmail));
+        message.To.Add(new MailboxAddress(toName, toEmail));
+        message.Subject = subject;
+        message.Body = new TextPart("html")
+        {
+            Text = content
         };
 
-        message.AddContent(MimeType.Html, content);
-        message.AddTo(to);
+        using var client = new SmtpClient();
+        client.ServerCertificateValidationCallback = (s, c, h, e) => true;
+        await client.ConnectAsync(_config.SmtpHost, _config.SmtpPort, false);
+        //await client.AuthenticateAsync(_config.FromEmail, _config.Password);
+        await client.SendAsync(message);
+        await client.DisconnectAsync(true);
 
-        message.SetClickTracking(false, false);
-        message.SetOpenTracking(false);
-        message.SetGoogleAnalytics(false);
-        message.SetSubscriptionTracking(false);
-        
-        await _client.SendEmailAsync(message);
     }
 }

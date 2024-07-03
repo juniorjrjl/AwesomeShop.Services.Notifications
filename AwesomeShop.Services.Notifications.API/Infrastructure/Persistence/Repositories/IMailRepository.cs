@@ -7,4 +7,6 @@ public interface IMailRepository
     
     Task<EmailTemplateDTO> GetTemplate(string @event);
 
+    Task AddManyAsync(List<EmailTemplateDTO> templates);
+
 }

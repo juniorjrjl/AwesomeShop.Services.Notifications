@@ -40,28 +40,27 @@ public class PaymentAcceptedSubscriber : BackgroundService
             _channel.QueueBind(Queue, "payment-service", RoutingKey);
         }
         
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    protected async override Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var consumer = new EventingBasicConsumer(_channel);
 
-        consumer.Received += (sender, eventArgs) => {
+        consumer.Received += async (sender, eventArgs) => {
             var contentArray = eventArgs.Body.ToArray();
             var contentString = Encoding.UTF8.GetString(contentArray);
             var message = JsonConvert.DeserializeObject<PaymentAccepted>(contentString);
+            ArgumentNullException.ThrowIfNull(message);
 
-            Console.WriteLine($"[notification-service] Message PaymentAccepted received with Id {message.Id}");
+            Console.WriteLine($"[notification-service] Message PaymentAccepted received {message}");
 
-            //await SendEmail(message);
+            await SendEmail(message);
 
             _channel.BasicAck(eventArgs.DeliveryTag, false);
         };
 
         _channel.BasicConsume(Queue, false, consumer);
-                    
-        return Task.CompletedTask;
     }
 
-    /*private async Task<bool> SendEmail(PaymentAccepted payment) {
+    private async Task<bool> SendEmail(PaymentAccepted payment) {
         using var scope = _serviceProvider.CreateScope();
         var emailService = scope.ServiceProvider.GetService<INotificationService>();
         ArgumentNullException.ThrowIfNull(emailService);
@@ -76,5 +75,5 @@ public class PaymentAcceptedSubscriber : BackgroundService
         await emailService.SendAsync(subject, content, payment.Email, payment.FullName);
 
         return true;
-    }*/
+    }
 }
