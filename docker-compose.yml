@@ -11,6 +11,11 @@ services:
       RabbitMQ__Password: QlHhmVNnNeGL_s3rx9uAZ4icwcVBKo9I
       RabbitMQ__Port: 5672
       RabbitMQ__VirtualHost: cnxoyvms
+      Notifications__FromName: Junior
+      Notifications__FromEmail: junior@junior.com
+      Notifications__Password: junior
+      Notifications__SmtpHost: notificationmailcacther
+      Notifications__SmtpPort: 25
       Urls: http://+:5004
     command: bash start-dev.sh
     ports:
@@ -28,6 +33,13 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: notification-service
     ports:
       - "27018:27017"
+    networks:
+      - awesome-shop-services-net
+  notificationmailcacther:
+    image: tophfr/mailcatcher
+    ports:
+      - "1025:25"
+      - "1080:80"
     networks:
       - awesome-shop-services-net
 
