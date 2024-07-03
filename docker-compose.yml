@@ -1,0 +1,37 @@
+services:
+  notificationapi:
+    build:
+      context: .
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Mongo__ConnectionStrings: mongodb://notification-service:notification-service@notificationdb:27017
+      Mongo__Database: notification-service
+      RabbitMQ__Host: crow-01.rmq.cloudamqp.com
+      RabbitMQ__User: cnxoyvms
+      RabbitMQ__Password: QlHhmVNnNeGL_s3rx9uAZ4icwcVBKo9I
+      RabbitMQ__Port: 5672
+      RabbitMQ__VirtualHost: cnxoyvms
+      Urls: http://+:5004
+    command: bash start-dev.sh
+    ports:
+      - "5004:5004"
+    networks:
+      - awesome-shop-services-net
+    volumes:
+      - .:/AwesomeShop.Services.Customers
+    depends_on:
+      - notificationdb
+  notificationdb:
+    image: mongodb/mongodb-community-server:7.0.5-ubi8
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: notification-service
+      MONGO_INITDB_ROOT_PASSWORD: notification-service
+    ports:
+      - "27018:27017"
+    networks:
+      - awesome-shop-services-net
+
+networks:
+  awesome-shop-services-net:
+    name: awesome-shop-services-net
+    external: true

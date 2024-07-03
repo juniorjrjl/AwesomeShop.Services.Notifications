@@ -1,0 +1,1 @@
+dotnet run --project AwesomeShop.Services.Notifications.API/AwesomeShop.Services.Notifications.API.csproj
